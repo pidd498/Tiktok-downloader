@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>project fidd| TikTok Downloader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #0a192f; } /* Navy Dark */
+        .navy-card { background-color: #112240; border: 1px solid #233554; }
+        .input-focus:focus-within { border-color: #60a5fa; box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade { animation: fadeIn 0.5s ease-out forwards; }
+    </style>
+</head>
+<body class="text-slate-300 min-h-screen font-sans flex items-center justify-center">
+
+    <div class="max-w-xl w-full mx-auto px-6 py-12">
+        <div class="text-center mb-10">
+            <div class="inline-block p-4 rounded-3xl bg-blue-500/10 mb-4 border border-blue-500/20">
+                <i class="fab fa-tiktok text-4xl text-blue-400"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-white tracking-tight">TikTok <span class="text-blue-400">Downloader</span></h1>
+            <p class="text-slate-400 mt-2">Unduh video tanpa watermark By Hafidhh project</p>
+        </div>
+
+        <div class="navy-card p-2 rounded-2xl shadow-2xl flex items-center mb-8 input-focus transition-all">
+            <input type="text" id="urlInput" placeholder="Tempel link video TikTok di sini..." 
+                class="bg-transparent w-full p-4 outline-none text-white placeholder-slate-500">
+            <button onclick="handleDownload()" id="btnAction"
+                class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-bold transition-all flex items-center gap-2 whitespace-nowrap">
+                <span>Ekstrak</span>
+                <i class="fas fa-magic"></i>
+            </button>
+        </div>
+
+        <div id="loading" class="hidden text-center py-10">
+            <div class="animate-spin inline-block w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full mb-3"></div>
+            <p class="text-sm text-blue-400 font-medium tracking-wide">Sedang memproses video...</p>
+        </div>
+
+        <div id="result" class="hidden animate-fade">
+            <div class="navy-card rounded-3xl overflow-hidden shadow-2xl border border-blue-500/20">
+                <div class="relative h-60 w-full">
+                    <img id="resCover" src="" class="w-full h-full object-cover opacity-40">
+                    <div class="absolute inset-0 bg-gradient-to-t from-[#112240] via-[#112240]/40 to-transparent"></div>
+                    <div class="absolute bottom-6 left-6 flex items-center gap-4">
+                        <img id="resAvatar" src="" class="w-14 h-14 rounded-full border-2 border-blue-500 shadow-lg">
+                        <div>
+                            <p id="resAuthor" class="text-white font-bold text-lg">@username</p>
+                            <span class="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase rounded border border-blue-500/30">Verified Creator</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-8">
+                    <p id="resTitle" class="text-slate-300 mb-8 italic text-sm leading-relaxed border-l-2 border-blue-500 pl-4">
+                        "Judul video..."
+                    </p>
+                    
+                    <div class="grid grid-cols-1 gap-3" id="downloadButtons">
+                        </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="mt-12 text-center text-slate-600 text-xs">
+            &copy; 2025 FIDDD project &bull; Built with Node.js
+        </footer>
+    </div>
+
+    <script>
+        async function handleDownload() {
+            const urlInput = document.getElementById('urlInput');
+            const btnAction = document.getElementById('btnAction');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const url = urlInput.value.trim();
+
+            if(!url) {
+                alert("Masukkan URL TikTok terlebih dahulu!");
+                return;
+            }
+
+            // UI Feedback
+            loading.classList.remove('hidden');
+            result.classList.add('hidden');
+            btnAction.disabled = true;
+            btnAction.classList.add('opacity-50');
+
+            try {
+                // Menuju endpoint Node.js kamu di port 3000
+                const response = await fetch(`/api/download?url=${encodeURIComponent(url)}`);
+                
+                if (!response.ok) throw new Error("Gagal terhubung ke server Node.js");
+                
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+
+                renderResult(data);
+            } catch (error) {
+                alert("Error: " + error.message);
+                loading.classList.add('hidden');
+            } finally {
+                btnAction.disabled = false;
+                btnAction.classList.remove('opacity-50');
+            }
+        }
+
+        function renderResult(data) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('result').classList.remove('hidden');
+
+            // Set Meta Data
+            document.getElementById('resCover').src = data.cover || 'https://images.unsplash.com/photo-1616469829581-73993eb86b02?q=80&w=1000&auto=format&fit=crop';
+            document.getElementById('resAvatar').src = data.author.avatar || 'https://ui-avatars.com/api/?background=0D8ABC&color=fff&name=' + data.author.username;
+            document.getElementById('resAuthor').innerText = data.author.username || 'Anonymous';
+            document.getElementById('resTitle').innerText = data.title || 'Tidak ada deskripsi.';
+
+            // Render Download Buttons
+            const container = document.getElementById('downloadButtons');
+            container.innerHTML = '';
+
+            data.downloads.forEach(dl => {
+                const isMusic = dl.label.toLowerCase().includes('music') || dl.label.toLowerCase().includes('audio');
+                container.innerHTML += `
+                    <a href="${dl.url}" target="_blank" 
+                        class="flex items-center justify-between w-full bg-[#1d2d50] hover:bg-blue-600 border border-slate-700 hover:border-blue-400 p-4 rounded-2xl transition-all group shadow-sm">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 bg-blue-500/20 rounded-lg text-blue-400 group-hover:bg-white group-hover:text-blue-600 transition-colors">
+                                <i class="fas ${isMusic ? 'fa-music' : 'fa-video'}"></i>
+                            </div>
+                            <span class="font-semibold text-sm text-white">${dl.label}</span>
+                        </div>
+                        <i class="fas fa-chevron-right text-slate-500 group-hover:text-white group-hover:translate-x-1 transition-all"></i>
+                    </a>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>
